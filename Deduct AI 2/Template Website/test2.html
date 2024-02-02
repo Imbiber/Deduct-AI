@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teachable Machine Image Model - Dark Theme</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            color: #fff;
+            background-color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            margin-top: 50px;
+        }
+        .container {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        #webcam-container, #label-container, #evidence-list {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            margin: 10px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 18px;
+            transition: background-color 0.3s ease;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        div#label-container, div#evidence-list {
+            max-width: 400px;
+            text-align: center;
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 10px;
+            background-color: #555;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        div#label-container div, div#evidence-list div {
+            font-size: 18px;
+            font-weight: bold;
+            color: #ddd;
+            padding: 8px;
+        }
+        @media (max-width: 600px) {
+            body {
+                margin-top: 20px;
+            }
+            button {
+                padding: 10px 20px;
+                font-size: 16px;
+            }
+            div#label-container div, div#evidence-list div {
+                font-size: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div>Teachable Machine Image Model</div>
+        <button type="button" onclick="init()">Start</button>
+    </div>
+    <div id="webcam-container"></div>
+    <div id="label-container"></div>
+    <div id="evidence-list">
+        <div>Following evidences Detected:</div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+    <script type="text/javascript">
+        const URL = "https://teachablemachine.withgoogle.com/models/npnLOllsx/";
+        let model, webcam, labelContainer, maxPredictions, evidenceList;
+
+        async function init() {
+            const modelURL = URL + "model.json";
+            const metadataURL = URL + "metadata.json";
+            model = await tmImage.load(modelURL, metadataURL);
+            maxPredictions = model.getTotalClasses();
+            const flip = true;
+            webcam = new tmImage.Webcam(400, 400, flip); // Increased size
+            await webcam.setup();
+            await webcam.play();
+            window.requestAnimationFrame(loop);
+            document.getElementById("webcam-container").appendChild(webcam.canvas);
+            labelContainer = document.getElementById("label-container");
+            evidenceList = document.getElementById("evidence-list");
+            for (let i = 0; i < maxPredictions; i++) {
+                labelContainer.appendChild(document.createElement("div"));
+            }
+        }
+
+        async function loop() {
+            webcam.update();
+            await predict();
+            window.requestAnimationFrame(loop);
+        }
+        async function predict() {
+            const prediction = await model.predict(webcam.canvas);
+            for (let i = 0; i < maxPredictions; i++) {
+                const classPrediction = prediction[i].className + ": " + prediction[i].probability.toFixed(2);
+                labelContainer.childNodes[i].innerHTML = classPrediction;
+                if (prediction[i].probability.toFixed(2) > 0.8) {
+                    updateEvidenceList(prediction[i].className);
+                }
+            }
+        }
+
+        function updateEvidenceList(item) {
+            const existingItems = evidenceList.querySelectorAll('div');
+            const itemNames = Array.from(existingItems).map(div => div.textContent);
+            if (!itemNames.includes(item)) {
+                const div = document.createElement("div");
+                div.textContent = item;
+                evidenceList.appendChild(div);
+            }
+        }
+    </script>
+</body>
+</html>
